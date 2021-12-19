@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat APP</title>
+	
+</head>
+<body>
+    <ul id="Online"></ul>
+
+    <h1 id="name" style="display: none;">test</h1>
+    <input class="Message" id="message" name="" style="height:50px;width:700px;display: none;">
+    <button onclick="sendMessage()">Send</button>
+    
+	<script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script>
+        var users = [];
+        var socket = io();
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const usernameFromURL = urlParams.get('username')
+
+        p = document.createElement("h1");
+        p.innerHTML = "Welcome to the chat "+usernameFromURL;
+        document.body.appendChild(p);
+
+
+        var selectedUserName = "";
+        var selectedUserID = "";
+        async function getOnlineUsers(){
+            const response = await fetch('http://localhost:3000/getOnlineUsers');
+            const data = await response.json();
+            data.forEach(element => {
+                appendTolist(element)
+            }); 
+        };
+
+        getOnlineUsers()
+        
+
+        socket.on("user connected", (user) => {
+            // if(!users.indexOf(user) > -1){
+            //     users.push(user);
+            //     console.log(users);
+            //     appendTolist(user)
+            // }
+            appendTolist(user)
+        });
+        socket.on("user disconnected",(user) =>{
+            removeFromList(user)
+        })
+        socket.on("private-message", ({ message, from }) => { 
+            alert("Message from "+from+": "+message) 
+            console.log(message,from);
+        });
+
+        function appendTolist(user){
+                var a = document.createElement("button");
+                var ulist = document.getElementById("Online");
+                var newItem = document.createElement("li");
+
+                a.textContent = user.username;
+                newItem.name = user.username;
+                newItem.id = user.userID
+                a.setAttribute('onclick','openBox("'+user.username+"\",\""+user.userID+'\");');
+                newItem.appendChild(a);
+                ulist.appendChild(newItem);
+        }
+
+        function removeFromList(user){
+            var rlist = document.getElementById(user.userID);
+            document.getElementById("Online").removeChild(rlist);
+        }
+
+
+        function openBox(username,id){
+            var inp = document.getElementById("message")
+            var name = document.getElementById("name")
+            inp.style.display = "block";
+            name.style.display = "block";
+            name.innerHTML = "Chat with "+username;
+            selectedUserName = username;
+            selectedUserID = id;
+            console.log(id,username);
+        }
+
+        function sendMessage(){
+            
+            console.log(usernameFromURL);
+            var inp = document.getElementById("message")
+            console.log(inp.value,selectedUserID);
+            socket.emit('private-message',{
+                message:inp.value,
+                to: selectedUserID,
+                from:usernameFromURL
+
+            })
+        }
+
+        window.onbeforeunload = function() { 
+            window.setTimeout(function () { 
+                window.location = '/';
+            }, 0); 
+            window.onbeforeunload = null; // necessary to prevent infinite loop, that kills your browser 
+        }
+        
+		
+
+	</script>
+</body>
+</html>
